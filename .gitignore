@@ -1,0 +1,65 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+build/
+dist/
+*.egg-info/
+.eggs/
+pip-wheel-metadata/
+
+# --- Entornos virtuales ---
+.venv/
+venv/
+env/
+ENV/
+
+# --- Variables de entorno y secretos ---
+.env
+.env.*
+!.env.example
+*.pem
+*.ppk
+
+# --- Pruebas y cobertura ---
+.pytest_cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+.tox/
+.nox/
+
+# --- Herramientas de calidad ---
+.mypy_cache/
+.ruff_cache/
+.dmypy.json
+.scannerwork/
+
+# --- Flask ---
+instance/
+.webassets-cache
+
+# --- Bases de datos locales ---
+*.sqlite3
+*.db
+
+# --- Docker (datos locales) ---
+docker-data/
+pgdata/
+
+# --- Logs ---
+*.log
+logs/
+
+# --- IDEs y editores ---
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# --- Sistema operativo ---
+.DS_Store
+Thumbs.db
+desktop.ini
