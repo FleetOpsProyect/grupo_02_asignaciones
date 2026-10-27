@@ -104,6 +104,25 @@ copy .env.example .env       # Windows
 sin activarlo. Si se prefiere activarlo una sola vez por sesion de terminal:
 `source .venv/bin/activate` (Linux/Mac) o `.venv\Scripts\activate` (Windows).
 
+**Sin uv:** si prefieres manejar el entorno virtual y las dependencias a mano
+con `pip`, `requirements.txt` (produccion) y `requirements-dev.txt`
+(produccion + desarrollo) estan generados a partir de `uv.lock` con versiones
+exactas, como alternativa a `uv sync`:
+
+```bash
+python -m venv .venv
+source .venv/bin/activate        # Linux / Mac
+.venv\Scripts\activate           # Windows
+
+pip install -r requirements-dev.txt
+```
+
+Estos dos archivos se regeneran con
+`uv export --format requirements.txt --no-dev --no-hashes -o requirements.txt` y
+`uv export --format requirements.txt --only-dev --no-hashes -o requirements-dev.txt`
+cada vez que cambien las dependencias en `pyproject.toml`; `uv.lock` sigue
+siendo la fuente de verdad.
+
 Los valores por defecto de `.env.example` usan `postgres` y `redis` (los
 nombres de los servicios en `docker-compose.yml`) como host, para que
 funcionen cuando el propio microservicio corre dentro de docker-compose. Si
