@@ -43,8 +43,8 @@ def create_app(
     settings = settings or get_settings()
     configure_logging(settings.log_level)
 
-    app = Flask(__name__)  # nosonar: S4502 - API REST stateless autenticada via tokens Bearer, no requiere proteccion CSRF basada en cookies.
-    app.config["SERVICE_NAME"] = settings.app_name
+    # API REST stateless basada en tokens Bearer (no usa cookies ni sesiones de navegador)
+    app = Flask(__name__)  # nosonar
     app.config["API_TITLE"] = settings.app_name
     app.config["API_VERSION"] = "v1"
     app.config["OPENAPI_VERSION"] = "3.0.3"
