@@ -20,7 +20,13 @@ class Settings(BaseSettings):
     app_port: int = 8000
     log_level: str = "INFO"
 
-    database_url: str = Field(validation_alias="DATABASE_URL")
+    # Usamos credenciales genericas estándar de Postgres como default.
+    # En runtime o Docker, Pydantic sobrescribirá esto automáticamente con tu DATABASE_URL real.
+    database_url: str = Field(
+        default="postgresql+psycopg://postgres:postgres@localhost:5432/assignments",
+        validation_alias="DATABASE_URL",
+    )
+
     redis_url: str | None = None
 
     database_pool_size: int = 5
