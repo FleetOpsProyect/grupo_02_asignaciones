@@ -84,20 +84,137 @@ La documentación completa de cada endpoint estará en Swagger (OpenAPI) cuando 
 
 ## Desarrollo local
 
-Requisitos: Python 3.12, Docker y Git.
+Requisitos: Python 3.12, [uv](https://docs.astral.sh/uv/), Docker y Git.
 
 ```bash
 # Clonar el repositorio
 git clone <url-del-repositorio>
 cd ms-asignaciones
 
-# Crear y activar el entorno virtual
+# Instalar las dependencias (produccion y desarrollo) y crear el entorno
+# virtual en .venv; uv tambien instala la version de Python si falta
+uv sync
+
+# Copiar las variables de entorno de ejemplo
+cp .env.example .env        # Linux / Mac
+copy .env.example .env       # Windows
+```
+
+`uv run <comando>` ejecuta cualquier herramienta dentro del entorno del proyecto
+sin activarlo. Si se prefiere activarlo una sola vez por sesion de terminal:
+`source .venv/bin/activate` (Linux/Mac) o `.venv\Scripts\activate` (Windows).
+
+**Sin uv:** si prefieres manejar el entorno virtual y las dependencias a mano
+con `pip`, `requirements.txt` (produccion) y `requirements-dev.txt`
+(produccion + desarrollo) estan generados a partir de `uv.lock` con versiones
+exactas, como alternativa a `uv sync`:
+
+```bash
 python -m venv .venv
 source .venv/bin/activate        # Linux / Mac
 .venv\Scripts\activate           # Windows
 
-# Instalar dependencias (incluidas las de desarrollo)
-python -m pip install -e ".[dev]"
+pip install -r requirements-dev.txt
+```
+
+Estos dos archivos se regeneran con
+`uv export --format requirements.txt --no-dev --no-hashes -o requirements.txt` y
+`uv export --format requirements.txt --only-dev --no-hashes -o requirements-dev.txt`
+cada vez que cambien las dependencias en `pyproject.toml`; `uv.lock` sigue
+siendo la fuente de verdad.
+
+Los valores por defecto de `.env.example` usan `postgres` y `redis` (los
+nombres de los servicios en `docker-compose.yml`) como host, para que
+funcionen cuando el propio microservicio corre dentro de docker-compose. Si
+vas a ejecutar `alembic` o `flask`/`gunicorn` directamente desde tu maquina
+(fuera de Docker), cambia esos hosts por `localhost` en tu `.env`, ya que
+docker-compose tambien publica esos puertos en el host.
+
+### Levantar el servicio con Docker
+
+El `.env.example` apunta por defecto a los contenedores locales de
+`docker-compose.yml`. Hay dos modos:
+
+```bash
+# Con PostgreSQL en un contenedor local (no se tiene una base de datos propia)
+docker compose --profile local-db up
+
+# Con una base de datos externa (ajusta DATABASE_URL en .env)
+docker compose up
+```
+
+Redis se levanta siempre como contenedor local de desarrollo. Con cualquiera
+de los dos modos, el servicio queda disponible en `http://localhost:8000`:
+
+| Recurso | URL |
+|---|---|
+| Salud | `http://localhost:8000/health` |
+| Disponibilidad | `http://localhost:8000/ready` |
+| Metricas (Prometheus) | `http://localhost:8000/metrics` |
+| Swagger UI | `http://localhost:8000/swagger-ui` |
+
+### Migraciones
+
+El proyecto usa [Alembic](https://alembic.sqlalchemy.org/) para versionar los
+cambios al esquema de PostgreSQL: cada cambio (crear una tabla, agregar una
+columna, un indice, etc.) queda como un archivo en `alembic/versions/`, con un
+`upgrade()` y un `downgrade()`, para que todo el equipo y el CI apliquen los
+mismos cambios en el mismo orden en cualquier ambiente.
+
+`alembic/env.py` ya esta cableado con el proyecto: lee `DATABASE_URL` desde la
+configuracion (`.env`) y usa como referencia la `Base` declarativa de
+`adapters/outbound/persistence/base.py`. Por eso, el flujo normal es:
+
+1. Crear o modificar un modelo SQLAlchemy heredando de `Base`.
+2. Generar la migracion comparando ese modelo contra la base de datos real
+   (necesita PostgreSQL corriendo y accesible via `DATABASE_URL`):
+
+   ```bash
+   uv run alembic revision --autogenerate -m "crea tabla assignments"
+   ```
+
+3. **Revisar el archivo generado en `alembic/versions/`** antes de aplicarlo:
+   `--autogenerate` detecta bien tablas y columnas nuevas, pero no siempre
+   detecta renombrados, cambios de tipo complejos o constraints.
+4. Aplicar la migracion:
+
+   ```bash
+   uv run alembic upgrade head
+   ```
+
+Otros comandos utiles:
+
+```bash
+uv run alembic downgrade -1   # deshace la ultima migracion aplicada
+uv run alembic history        # historial de migraciones
+uv run alembic current        # revision en la que esta la base conectada
+```
+
+Una vez una migracion ya se aplico en `develop`/`main` o en la base de datos
+de otro integrante del equipo, no se edita: se crea una migracion nueva
+encima. Si todavia esta solo en tu rama, si puedes borrarla y regenerarla.
+
+### Ejecutar el servicio sin Docker
+
+```bash
+# Servidor de desarrollo de Flask, con autorecarga
+uv run flask --app assignments.main:create_app run --port 8000 --debug
+
+# Servidor de produccion (gunicorn), igual que en el Dockerfile
+uv run gunicorn --bind 0.0.0.0:8000 --threads 4 --no-control-socket "assignments.main:create_app()"
+```
+
+### Pruebas
+
+```bash
+# Unitarias: no requieren Docker
+uv run pytest tests/unit
+
+# Integracion: usan Testcontainers, Docker debe estar corriendo
+uv run pytest tests/integration
+
+# Todas, con reporte de cobertura (minimo 80 %)
+uv run pytest --cov=src --cov-report=term-missing --cov-fail-under=80
 ```
 
 ## Calidad de código
