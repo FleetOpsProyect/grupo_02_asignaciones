@@ -45,6 +45,7 @@ def create_app(
 
     # API REST stateless basada en tokens Bearer (no usa cookies ni sesiones de navegador)
     app = Flask(__name__)  # nosonar
+    app.config["SERVICE_NAME"] = settings.app_name
     app.config["API_TITLE"] = settings.app_name
     app.config["API_VERSION"] = "v1"
     app.config["OPENAPI_VERSION"] = "3.0.3"
