@@ -58,6 +58,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: coverage-xml
+          path: .  # Forzar descarga en la raíz del espacio de trabajo
 
       - name: SonarCloud scan
         uses: SonarSource/sonarcloud-github-action@v3
