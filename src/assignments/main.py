@@ -44,6 +44,7 @@ def create_app(
     configure_logging(settings.log_level)
 
     app = Flask(__name__)
+    app.config["WTF_CSRF_ENABLED"] = False
     app.config["SERVICE_NAME"] = settings.app_name
     app.config["API_TITLE"] = settings.app_name
     app.config["API_VERSION"] = "v1"

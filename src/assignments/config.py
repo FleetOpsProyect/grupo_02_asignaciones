@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -19,7 +20,7 @@ class Settings(BaseSettings):
     app_port: int = 8000
     log_level: str = "INFO"
 
-    database_url: str = "postgresql+psycopg://assignments:assignments@localhost:5432/assignments"
+    database_url: str = Field(validation_alias="DATABASE_URL")
     redis_url: str | None = None
 
     database_pool_size: int = 5
