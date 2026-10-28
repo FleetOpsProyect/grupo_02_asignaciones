@@ -61,6 +61,7 @@ markers = [
 ]
 
 [tool.coverage.run]
+relative_files = true
 source = ["src"]
 omit = [
     "src/assignments/*/__init__.py",
