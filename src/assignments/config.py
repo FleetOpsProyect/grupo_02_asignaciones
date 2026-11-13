@@ -9,9 +9,9 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     """Variables de entorno soportadas por el arquetipo.
 
-    Las variables especificas de negocio (BROKER_URL, VEHICULOS_URL,
-    CONDUCTORES_URL, HTTP_TIMEOUT_MS, ...) se agregan aqui cuando se
-    implementen los adapters que las necesitan.
+    BROKER_URL todavia no se agrega: el broker de eventos (Kafka o RabbitMQ)
+    sigue por definir entre los equipos, asi que por ahora no hay adapter que
+    la necesite.
     """
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
