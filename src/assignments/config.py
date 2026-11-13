@@ -32,6 +32,13 @@ class Settings(BaseSettings):
     database_pool_size: int = 5
     database_pool_timeout_seconds: int = 5
 
+    # URL base de los servicios de Vehiculos y Conductores (otros microservicios
+    # de FleetOps). None mientras no se conecten con un ambiente real: en ese
+    # caso, crear una asignacion siempre falla con 503 (servicio no disponible).
+    vehiculos_url: str | None = Field(default=None, validation_alias="VEHICULOS_URL")
+    conductores_url: str | None = Field(default=None, validation_alias="CONDUCTORES_URL")
+    http_timeout_ms: int = Field(default=3000, validation_alias="HTTP_TIMEOUT_MS")
+
 
 def get_settings() -> Settings:
     """Construye la configuracion a partir del entorno actual."""
