@@ -9,9 +9,9 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     """Variables de entorno soportadas por el arquetipo.
 
-    Las variables especificas de negocio (BROKER_URL, VEHICULOS_URL,
-    CONDUCTORES_URL, HTTP_TIMEOUT_MS, ...) se agregan aqui cuando se
-    implementen los adapters que las necesitan.
+    BROKER_URL todavia no se agrega: el broker de eventos (Kafka o RabbitMQ)
+    sigue por definir entre los equipos, asi que por ahora no hay adapter que
+    la necesite.
     """
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
@@ -31,6 +31,13 @@ class Settings(BaseSettings):
 
     database_pool_size: int = 5
     database_pool_timeout_seconds: int = 5
+
+    # URL base de los servicios de Vehiculos y Conductores (otros microservicios
+    # de FleetOps). None mientras no se conecten con un ambiente real: en ese
+    # caso, crear una asignacion siempre falla con 503 (servicio no disponible).
+    vehiculos_url: str | None = Field(default=None, validation_alias="VEHICULOS_URL")
+    conductores_url: str | None = Field(default=None, validation_alias="CONDUCTORES_URL")
+    http_timeout_ms: int = Field(default=3000, validation_alias="HTTP_TIMEOUT_MS")
 
 
 def get_settings() -> Settings:
