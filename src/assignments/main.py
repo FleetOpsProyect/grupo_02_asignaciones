@@ -18,13 +18,28 @@ from flask import Flask
 from flask_smorest import Api
 from prometheus_flask_exporter import PrometheusMetrics
 
+from assignments.adapters.inbound.http.assignments import blp as assignments_blp
 from assignments.adapters.inbound.http.errors import register_error_handlers
 from assignments.adapters.inbound.http.health import HealthCheck
 from assignments.adapters.inbound.http.health import blp as health_blp
 from assignments.adapters.inbound.http.middleware import register_correlation_id
 from assignments.adapters.outbound.cache import build_cache_health_check, build_redis_client
-from assignments.adapters.outbound.persistence import build_engine
+from assignments.adapters.outbound.http_clients import (
+    HttpDriverDirectory,
+    HttpVehicleDirectory,
+    UnconfiguredDirectory,
+)
+from assignments.adapters.outbound.messaging import LoggingAssignmentEventPublisher
+from assignments.adapters.outbound.persistence import (
+    SqlAlchemyAssignmentRepository,
+    build_engine,
+    build_session_factory,
+)
 from assignments.adapters.outbound.persistence.health import build_database_health_check
+from assignments.application.ports.fleet_directory import DriverDirectoryPort, VehicleDirectoryPort
+from assignments.application.use_cases.create_assignment import CreateAssignmentUseCase
+from assignments.application.use_cases.get_assignment import GetAssignmentUseCase
+from assignments.application.use_cases.list_assignments import ListAssignmentsUseCase
 from assignments.config import Settings, get_settings
 from assignments.logging_setup import configure_logging
 
@@ -53,8 +68,9 @@ def create_app(
     app.config["OPENAPI_SWAGGER_UI_PATH"] = "/swagger-ui"
     app.config["OPENAPI_SWAGGER_UI_URL"] = "https://cdn.jsdelivr.net/npm/swagger-ui-dist/"
 
+    engine = build_engine(settings)
+
     if readiness_checks is None:
-        engine = build_engine(settings)
         readiness_checks = [build_database_health_check(engine)]
         redis_client = build_redis_client(settings)
         cache_check = build_cache_health_check(redis_client)
@@ -62,12 +78,24 @@ def create_app(
             readiness_checks.append(cache_check)
     app.config["READINESS_CHECKS"] = readiness_checks
 
+    repository = SqlAlchemyAssignmentRepository(build_session_factory(engine))
+    vehicle_directory = _build_vehicle_directory(settings)
+    driver_directory = _build_driver_directory(settings)
+    event_publisher = LoggingAssignmentEventPublisher()
+
+    app.config["CREATE_ASSIGNMENT_USE_CASE"] = CreateAssignmentUseCase(
+        repository, vehicle_directory, driver_directory, event_publisher
+    )
+    app.config["GET_ASSIGNMENT_USE_CASE"] = GetAssignmentUseCase(repository)
+    app.config["LIST_ASSIGNMENTS_USE_CASE"] = ListAssignmentsUseCase(repository)
+
     register_correlation_id(app)
 
     PrometheusMetrics(app)
 
     api = Api(app)
     api.register_blueprint(health_blp)
+    api.register_blueprint(assignments_blp)
 
     # Se registra al final: flask-smorest instala su propio manejador de
     # HTTPException al construir Api(app), y Flask usa el ultimo registrado
@@ -76,3 +104,15 @@ def create_app(
     register_error_handlers(app)
 
     return app
+
+
+def _build_vehicle_directory(settings: Settings) -> VehicleDirectoryPort:
+    if settings.vehiculos_url is None:
+        return UnconfiguredDirectory("Vehiculos")
+    return HttpVehicleDirectory(settings.vehiculos_url, settings.http_timeout_ms / 1000)
+
+
+def _build_driver_directory(settings: Settings) -> DriverDirectoryPort:
+    if settings.conductores_url is None:
+        return UnconfiguredDirectory("Conductores")
+    return HttpDriverDirectory(settings.conductores_url, settings.http_timeout_ms / 1000)
