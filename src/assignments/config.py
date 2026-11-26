@@ -39,6 +39,11 @@ class Settings(BaseSettings):
     conductores_url: str | None = Field(default=None, validation_alias="CONDUCTORES_URL")
     http_timeout_ms: int = Field(default=3000, validation_alias="HTTP_TIMEOUT_MS")
 
+    # Swagger UI queda deshabilitado por defecto (OWASP A05): no es necesario
+    # exponerlo en produccion y reduce la superficie de ataque. Se habilita
+    # explicitamente en desarrollo con ENABLE_SWAGGER=true.
+    enable_swagger: bool = Field(default=False, validation_alias="ENABLE_SWAGGER")
+
 
 def get_settings() -> Settings:
     """Construye la configuracion a partir del entorno actual."""
