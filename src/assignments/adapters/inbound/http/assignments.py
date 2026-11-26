@@ -20,6 +20,7 @@ from flask_smorest import Blueprint
 from marshmallow import Schema, fields
 from werkzeug.exceptions import BadRequest, Conflict, NotFound, ServiceUnavailable
 
+from assignments.adapters.inbound.http.rate_limit import limiter
 from assignments.application.errors import ExternalServiceUnavailableError
 from assignments.application.ports.assignment_repository import AssignmentFilters
 from assignments.application.use_cases.create_assignment import (
@@ -146,6 +147,9 @@ def _parse_list_query(
 class AssignmentCollectionResource(MethodView):
     """POST crea una asignacion; GET lista todas, con filtros y resumen por estado."""
 
+    # OWASP A04: limite de tasa por IP para evitar que se spamee la creacion
+    # de asignaciones (ej. agotar vehiculos/conductores disponibles a proposito).
+    @limiter.limit("10 per minute")
     @blp.arguments(AssignmentCreateRequestSchema)  # type: ignore[untyped-decorator]
     @blp.response(HTTPStatus.CREATED, AssignmentResponseSchema)  # type: ignore[untyped-decorator]
     @blp.alt_response(  # type: ignore[untyped-decorator]
