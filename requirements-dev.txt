@@ -7,7 +7,7 @@
 
 ast-serialize==0.13.1
     # via mypy
-certifi==2026.10.23
+certifi==2026.11.20
     # via requests
 charset-normalizer==3.5.2
     # via requests
