@@ -45,7 +45,7 @@ pywin32==312 ; sys_platform == 'win32'
     # via docker
 requests==2.34.2
     # via docker
-ruff==0.17.3
+ruff==0.17.6
 testcontainers==4.15.0
 typing-extensions==4.16.0
     # via
