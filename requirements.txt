@@ -32,7 +32,7 @@ markupsafe==3.0.4
     #   jinja2
     #   mako
     #   werkzeug
-marshmallow==4.3.1
+marshmallow==4.4.0
     # via
     #   apispec
     #   flask-smorest
