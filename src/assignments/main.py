@@ -16,6 +16,7 @@ from __future__ import annotations
 
 from flask import Flask
 from flask_smorest import Api
+from flask_talisman import Talisman
 from prometheus_flask_exporter import PrometheusMetrics
 
 from assignments.adapters.inbound.http.assignments import blp as assignments_blp
@@ -23,6 +24,7 @@ from assignments.adapters.inbound.http.errors import register_error_handlers
 from assignments.adapters.inbound.http.health import HealthCheck
 from assignments.adapters.inbound.http.health import blp as health_blp
 from assignments.adapters.inbound.http.middleware import register_correlation_id
+from assignments.adapters.inbound.http.rate_limit import limiter
 from assignments.adapters.outbound.cache import build_cache_health_check, build_redis_client
 from assignments.adapters.outbound.http_clients import (
     HttpDriverDirectory,
@@ -65,8 +67,9 @@ def create_app(
     app.config["API_VERSION"] = "v1"
     app.config["OPENAPI_VERSION"] = "3.0.3"
     app.config["OPENAPI_URL_PREFIX"] = "/"
-    app.config["OPENAPI_SWAGGER_UI_PATH"] = "/swagger-ui"
-    app.config["OPENAPI_SWAGGER_UI_URL"] = "https://cdn.jsdelivr.net/npm/swagger-ui-dist/"
+    if settings.enable_swagger:
+        app.config["OPENAPI_SWAGGER_UI_PATH"] = "/swagger-ui"
+        app.config["OPENAPI_SWAGGER_UI_URL"] = "https://cdn.jsdelivr.net/npm/swagger-ui-dist/"
 
     engine = build_engine(settings)
 
@@ -90,6 +93,14 @@ def create_app(
     app.config["LIST_ASSIGNMENTS_USE_CASE"] = ListAssignmentsUseCase(repository)
 
     register_correlation_id(app)
+
+    # OWASP A05: headers de seguridad estandar (X-Content-Type-Options,
+    # X-Frame-Options, Strict-Transport-Security...). Sin CSP propia (None)
+    # porque bloquearia el CDN de Swagger UI; y sin forzar HTTPS en la app
+    # porque ese TLS lo termina API Gateway, no este proceso.
+    Talisman(app, content_security_policy=None, force_https=False)
+
+    limiter.init_app(app)
 
     PrometheusMetrics(app)
 
